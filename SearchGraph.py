@@ -14,7 +14,7 @@ class SearchGraph:
         else:
             self.cached_prob = probability
 
-     def build_Context(self):
+      def build_Context(self):
         context_list = []
         node = self
         while node.parent is not None:
@@ -38,30 +38,30 @@ class SearchGraph:
                  formatted_contextList.append(context_list[i])
         return ' '.join(formatted_contextList)
 
-    def create_child(self):
+      def create_child(self):
         if self.parent is not None:
            self.parent.child.append(self)
 
-    def replace_parent(self, new_parent):
+      def replace_parent(self, new_parent):
         """Assign a new parent and update cached probability."""
         self.parent = new_parent
         self.cached_prob = new_parent.calcProbTillNow() * self.probability
     
 
-    def calcProbTillNow(self):
+      def calcProbTillNow(self):
         """Return cached cumulative probability to avoid redundant calculations."""
         return self.cached_prob
 
-    # def calcProbTillNow(self):
-    #   prob = self.probability
-    #   node = self
-    #   while node.parent is not None:
-    #     prob = prob*node.parent.probability
-    #     node = node.parent
-    #   return prob    #can make this negative log probability.
+          # def calcProbTillNow(self):
+          #   prob = self.probability
+          #   node = self
+          #   while node.parent is not None:
+          #     prob = prob*node.parent.probability
+          #     node = node.parent
+          #   return prob    #can make this negative log probability.
 
-    def assign_parent_index(self,parent_index):
-      self.parent_index = parent_index
+      def assign_parent_index(self,parent_index):
+        self.parent_index = parent_index
 
 
 # basic implementation of the above class (OLD IMPLEMENTATION)

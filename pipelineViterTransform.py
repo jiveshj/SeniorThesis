@@ -131,13 +131,12 @@ def find_overlap_children(arr):
 def generateIntermediates(root,numTokens = 3, loop_runner = 4):
   sentence = SearchTree(root,1)
   context = []
-  # root = Node("I enjoy walking in the", prob = 1)\
   prob_list = []
   num_tokens = numTokens
   content = []
   probability = []
   model = LMHeadModel("gpt2")
-  tokens_50K = model.get_next_word_probabilities(sentence.context,num_tokens)
+  tokens_50K = model.get_batch_predictions([sentence.context],numTokens+3)
   children = []
   overlap = []
   most_common = []
@@ -146,13 +145,19 @@ def generateIntermediates(root,numTokens = 3, loop_runner = 4):
   probabilityMatrix = []
   uniqueTokensList = []
   new_content = []
+  uniqueTokenLength = []
+
+  flops_counter = {}
+  cached_probs = {}
+  batch_size = 75
+  holdout_number = 5
   for i in range(num_tokens):
-    context = tokens_50K[i][0]
+    context = tokens_50K[0][i][0]
     unique_tokens.add(context)
     new_content.append(context)
-    prob = tokens_50K[i][1]
+    prob = tokens_50K[0][i][1]
     probability.append(prob)
-    context = SearchTree(context,prob,sentence)
+    context = SearchTree(context,prob,sentence,parent_index = 0)
     context.create_child()
     uniqueTokensList.append(context)
     children.append(context)
@@ -161,61 +166,85 @@ def generateIntermediates(root,numTokens = 3, loop_runner = 4):
   previousUniqueLength = num_tokens
   #unique_elements.append(unique_tokens)
   initialStateProbability = probability
-
+  uniqueTokenLength.append(num_tokens)
   for i in range(2,loop_runner):
     unique_tokens = set()
     probability = []
     new_content = []
+    total_predictions = []
     previousSetLength = 0
-    for j in range(len(children)):
-      token_list = model.get_next_word_probabilities(children[j].build_Context(),num_tokens)
+    batch_sentences = [child.build_Context() for child in uniqueTokensList]
+    if len(batch_sentences)>holdout_number:
+        batch_sentences2 = batch_sentences[0:-holdout_number]
+        batch_predictions = model.get_batch_predictions(batch_sentences2,numTokens+2)
+        total_predictions = []
+        total_predictions.extend(batch_predictions)
+        batch_predictions1 = model.get_batch_predictions(batch_sentences[-holdout_number:],numTokens+2)
+        total_predictions.extend(batch_predictions1)
+    else:
+        total_predictions = model.get_batch_predictions(batch_sentences,numTokens+2)
+    # batch_sentences =  ["I enjoy walking in the park, but I'm not sure", "I enjoy walking in the park, but I'm not a", "I enjoy walking in the park, but I'm not going", "I enjoy walking in the park, but I'm also very", "I enjoy walking in the park, but I'm also not", "I enjoy walking in the park, but I'm afraid I", "I enjoy walking in the park, but I'm afraid that", "I enjoy walking in the park, but I'm afraid to", "I enjoy walking in the park, but I don't like", "I enjoy walking in the park, but I don't want", "I enjoy walking in the park, but I don't think", "I enjoy walking in the park, but I don' t", 'I enjoy walking in the park, but I don � c', 'I enjoy walking in the park, but I don � ve', 'I enjoy walking in the park, but I also enjoy the', 'I enjoy walking in the park, but I also enjoy being', 'I enjoy walking in the park, but I also enjoy walking', "I enjoy walking in the park, but it's a little", "I enjoy walking in the park, but it's a bit", "I enjoy walking in the park, but it's a lot", "I enjoy walking in the park, but it's hard for", 'I enjoy walking in the park, but it is very difficult', 'I enjoy walking in the park, but it is very hard', 'I enjoy walking in the park, but it is very quiet', 'I enjoy walking in the park, but it can get really', 'I enjoy walking in the park, but it can get pretty', "I enjoy walking in the park, but when I'm in", "I enjoy walking in the park, but when I'm out", 'I enjoy walking in the park, but when I walk down', 'I enjoy walking in the park, but when I walk into', 'I enjoy walking in the park, but when I go back', "I enjoy walking in the park, but when you're on", "I enjoy walking in the park, but when it's raining", "I enjoy walking in the park, but when it's time", "I enjoy walking in the park, but when it's dark", 'I enjoy walking in the park, but when it rains,', 'I enjoy walking in the park, but when it rains it', 'I enjoy walking in the park, and the people there are', 'I enjoy walking in the park, and the people there have', 'I enjoy walking in the park, and the people there seem', 'I enjoy walking in the park, and the people who live', 'I enjoy walking in the park, and the people who come', 'I enjoy walking in the park, and the people are always', 'I enjoy walking in the park, and the people are so', 'I enjoy walking in the park, and the people are nice', 'I enjoy walking in the park, and the view is amazing', 'I enjoy walking in the park, and the view is beautiful', 'I enjoy walking in the park, and the view is great', 'I enjoy walking in the park, and the view from my', 'I enjoy walking in the park, and the view from here', 'I enjoy walking in the park, and the view of this', 'I enjoy walking in the park, and the view of Lake', 'I enjoy walking in the park, and the smell and smell', 'I enjoy walking in the park, and the smell and taste', 'I enjoy walking in the park, I like to play with', 'I enjoy walking in the park, I like to watch movies', 'I enjoy walking in the park, I like the view.', 'I enjoy walking in the park, I like the view of', 'I enjoy walking in the park, I like the smell and', 'I enjoy walking in the park, I like the way they', 'I enjoy walking in the park, I like being in front', 'I enjoy walking in the park, I like being around people', 'I enjoy walking in the park, I like being around other', 'I enjoy walking in the park, I enjoy playing with friends', 'I enjoy walking in the park, I enjoy playing the game', 'I enjoy walking in the park, I enjoy playing the guitar', 'I enjoy walking in the park, I enjoy playing the piano', 'I enjoy walking in the park and seeing people. I love', "I enjoy walking in the park and seeing people. I'm", "I enjoy walking in the park and seeing people. It's", 'I enjoy walking in the park and seeing people. It is', 'I enjoy walking in the park and seeing people. It makes', "I enjoy walking in the park and seeing people. We're", 'I enjoy walking in the park and seeing people, but when', 'I enjoy walking in the park and seeing people and seeing what', 'I enjoy walking in the park and seeing people and animals ,"', 'I enjoy walking in the park and seeing all of these different', 'I enjoy walking in the park and seeing all of our neighbors', 'I enjoy walking in the park and seeing all of our favorite', 'I enjoy walking in the park and seeing all these beautiful trees', 'I enjoy walking in the park and seeing all these beautiful birds', 'I enjoy walking in the park and seeing all these different things', 'I enjoy walking in the park and seeing all these different species', 'I enjoy walking in the park and seeing all these different kinds', "I enjoy walking in the park and it's a great place", "I enjoy walking in the park and it's a great way", "I enjoy walking in the park and it's a great experience", "I enjoy walking in the park and it's a nice feeling", "I enjoy walking in the park and it's nice to see", "I enjoy walking in the park and it's nice to be", "I enjoy walking in the park and it's nice. It", "I enjoy walking in the park and it's nice. The", "I enjoy walking in the park and it's nice that we", "I enjoy walking in the park and it's nice that you", "I enjoy walking in the park and it's great for me", 'I enjoy walking in the park and it makes me want more', 'I enjoy walking in the park and it makes my day ."', 'I enjoy walking in the park and it makes my life easier', 'I enjoy walking in the park and it makes my body feel', 'I enjoy walking in the park and it makes my body look', 'I enjoy walking in the park and it makes my body stronger', 'I enjoy walking in the park. The park itself has been', 'I enjoy walking in the park. The park itself has some', 'I enjoy walking in the park. The park itself, though', 'I enjoy walking in the park. The trees are so tall', 'I enjoy walking in the streets of the United Arab Emir ate', 'I enjoy walking in the streets of the United Arab Emir ates', 'I enjoy walking in the streets of the United Arab Emir ati', 'I enjoy walking in the streets of London, but it was', 'I enjoy walking in the streets of London and seeing how many']
+
+    # batch_predictions = model.get_batch_predictions(batch_sentences,numTokens+2)
+    for j in range(len(uniqueTokensList)):
+
+
       for s in range(num_tokens):
-        context = token_list[s][0]
-        prob = token_list[s][1]
+        context = total_predictions[j][s][0]
+        prob = total_predictions[j][s][1]
+
+        if (i == loop_runner-1):
+           print(context, end = " ")
+           print(prob)
+
+
         unique_tokens.add(context)
-      
-        #probability.append(prob)
-        context = SearchTree(context,prob,children[j])
-        context.create_child()
+
+        context = SearchTree(context,prob,uniqueTokensList[j])   #probably redundant: Because I should only create SearchTree of unique tokens
+        # context.create_child() Removed this 2/19/2025
         if (len(unique_tokens)>previousSetLength):
           previousSetLength = len(unique_tokens)
           uniqueTokensList.append(context)
           new_content.append(context.context)
 
-        children.append(context)    # may be don't need to store everything rather I can just store unique elements in here
-    
+
     #unique_elements.append(unique_tokens) # append the unique tokens list at each iteration to unique_elements list
-    content.append(new_content) # for storing tokens which will pass to the decode_path function. 
+    content.append(new_content) # for storing tokens which will pass to the decode_path function.
+
     for token in uniqueTokensList[previousUniqueLength:]:
-      probs = []
+      probs = []  #for making probability matrix and applying viterbi.
+      probs2 = [] #for finding the new parent.
       for prevToken in uniqueTokensList[:previousUniqueLength]:
         probabilityCalc = findProbability(prevToken,token,model)
+
+
         probs.append(probabilityCalc)
+        probs2.append(probabilityCalc*prevToken.calcProbTillNow())
+        #new code below inserted:
+      if not probs2:
+        continue
+      else:
+        max_value = max(probs2)
+        max_index = probs2.index(max_value)
+        token.replace_parent(uniqueTokensList[:previousUniqueLength][max_index])
+        token.assign_parent_index(max_index)
+
       probability.append(probs)
     probabilityMatrix.append(probability)
-    
+    flops_counter[i-1] = model.get_batch_prediction_count()
+    model.reset_batch_prediction_count()
+
+
+    uniqueTokenLength.append(len(uniqueTokensList[previousUniqueLength:]))
+
     previousUniqueLength = len(uniqueTokensList[previousUniqueLength:])
     uniqueTokensList = uniqueTokensList[len(uniqueTokensList)-previousUniqueLength:]
 
-    #    for parents in children[num_tokens**(i-1)]
-    #    content = content[num_tokens**(i-1):] 
 
-    #    for probs in range(len(unique_elements)):
-    #      for prev_token in children[prev_length:len(unique_elements)]:
-    #         probability.append(findProbability(prev_token,content,model))
-    
-      
-
-    children = children[num_tokens**(i-1):]
-          
-    #content = content[num_tokens**(i-1):]
-    #probability = probability[num_tokens**(i-1):]
-    # count = Counter(content)
-    # most_common.append(count.most_common(1)[0][1])
-  return probabilityMatrix, initialStateProbability, content
+  return probabilityMatrix, initialStateProbability, content,uniqueTokenLength, flops_counter
 
 def ViterbiTransformerPipeline(rootSentence, numTokens = 3, loop_runner=3):
-    probabilityMatrix,initialStateProbability,content = generateIntermediates(rootSentence,numTokens,loop_runner+1)
+    probabilityMatrix,initialStateProbability,content, uniqueTokenLength, flops_counter = generateIntermediates(rootSentence,numTokens,loop_runner+1)
     best_path,viterbi_mat = VITERBI_Lists(probabilityMatrix, initialStateProbability)
     print('content: ',content)
     print('best_path: ',best_path)

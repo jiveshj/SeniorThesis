@@ -111,16 +111,18 @@ class LMHeadModel:
 
 
 
-
-def TransformerPipeline(rootSentence,loop_runner = 3):
+def runTransformerPipeline(rootSentence,loop_runner = 3):
   model = LMHeadModel("gpt2")
+  prob = 1
   finalSentence = rootSentence
   for i in range(loop_runner):
-    tokens_50K = model.get_next_word_probabilities(finalSentence)
+    tokens_50K = model.get_batch_predictions([finalSentence])
 
-    context = tokens_50K[0][0]
-    if context in ['.',':',',','?','!',';']:
+    context = tokens_50K[0][0][0]
+    prob =  prob*tokens_50K[0][0][1]
+    if context in ['.',':',',','?','!',';'] or "'" in context:
       finalSentence += context
+
     else:
       finalSentence = finalSentence + ' ' + context
-  return finalSentence
+  return finalSentence,prob

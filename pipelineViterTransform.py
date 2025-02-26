@@ -345,8 +345,8 @@ def generateIntermediates(root,numTokens = 3, loop_runner = 4):
 
 def ViterbiTransformerPipeline(rootSentence, numTokens = 3, loop_runner=3):
     probabilityMatrix,initialStateProbability,content, uniqueTokenLength, flops_counter = generateIntermediates(rootSentence,numTokens,loop_runner+1)
-    best_path,viterbi_mat = VITERBI_Lists(probabilityMatrix, initialStateProbability)
+    best_path,viterbi_mat,best_path_prob = VITERBI_Lists(probabilityMatrix, initialStateProbability)
     print('content: ',content)
     print('best_path: ',best_path)
     decodedString = decodePath(best_path,content,rootSentence)
-    return decodedString
+    return decodedString,best_path_prob

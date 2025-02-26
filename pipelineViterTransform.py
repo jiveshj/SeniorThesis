@@ -144,12 +144,18 @@ def decodePath(best_path,unique_tokens_list,root_string):
 #To make the probs ready find the unique tokens and then number them/store in a list and then find top 3 tokens given those tokens, find unique
 #tokens and then extract probs of getting those from the previous list. [state transition probmat] and then run viterbi!!
 
-def findProbability(InitialToken,FinalToken,model):
+def findProbability(InitialToken, FinalTokens, model):
     context = InitialToken.build_Context()
-    tokens_50K = model.get_next_word_probabilities(context)
-    for token,prob in tokens_50K:
-        if token == FinalToken.context:
-            return prob
+    tokens_50K = model.get_batch_predictions([context], 500)
+
+    token_dict = {}  # Dictionary to store only the first occurrence of each token
+
+    for token, prob in tokens_50K[0]:
+        if token not in token_dict or prob>token_dict[token]:  # Store only the first occurrence
+            token_dict[token] = prob
+
+    return [token_dict.get(FinalToken.context, 0) for FinalToken in FinalTokens]  # Return probability if found, else 0
+
 def most_frequent(List):
     return max(set(List), key=List.count)
 

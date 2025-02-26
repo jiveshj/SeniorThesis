@@ -1,5 +1,6 @@
 from newViterbi import VITERBI_Lists
 from collections import Counter
+from collections import defaultdict
 
 import torch
 from transformers import AutoModelForCausalLM , AutoTokenizer
@@ -64,38 +65,75 @@ class LMHeadModel:   # Check if this works
         # output=list(zip(next_token_candidates_tensor,all_candidates_probabilities))
         # return output
 
-
-
 class SearchTree:
-    def __init__(self,context,probability,parent = None,child = None):
+    def __init__(self,context,probability,parent = None,child = None,parent_index = None):
         self.context = context
         self.probability = probability
         self.parent = parent
         self.child = []
+        self.parent_index = parent_index  # newly created.
         if child is not None:
            self.child.append(child)
+        
+        # Cache cumulative probability at node creation
+        if parent:
+            self.cached_prob = parent.calcProbTillNow() * probability
+        else:
+            self.cached_prob = probability
+
     def build_Context(self):
-      
         context_list = []
         node = self
         while node.parent is not None:
-           
-            context_list.append(node.context)   
+            context_list.append(node.context)
             node = node.parent
         context_list.append(node.context)
         context_list.reverse()
         formatted_contextList = []
         for i in range(len(context_list)):
-            if context_list[i] in ['.',':',',','?','!',';']:
+            if context_list[i] in ['.',':',',','?','!',';'] or ("'" in context_list[i]):
                 if (i-1>= 0):
-                    formatted_contextList[i-1] += context_list[i]
+                    if context_list[i-1] not in  ['.',':',',','?','!',';'] and ("'" not in context_list[i-1]):#if two consecutive contexts are , ' etc.
+                        word = context_list[i-1]+context_list[i]
+
+                        formatted_contextList.remove(context_list[i-1])
+                        formatted_contextList.append(word)
+                    else:
+                        formatted_contextList.append(context_list[i])
             else:
-                formatted_contextList.append(context_list[i])
+
+                 formatted_contextList.append(context_list[i])
         return ' '.join(formatted_contextList)
-    
+
     def create_child(self):
         if self.parent is not None:
            self.parent.child.append(self)
+
+    def replace_parent(self, new_parent):
+        """Assign a new parent and update cached probability."""
+        self.parent = new_parent
+        self.cached_prob = new_parent.calcProbTillNow() * self.probability
+    
+
+    def calcProbTillNow(self):
+        """Return cached cumulative probability to avoid redundant calculations."""
+        return self.cached_prob
+
+    # def calcProbTillNow(self):
+    #   prob = self.probability
+    #   node = self
+    #   while node.parent is not None:
+    #     prob = prob*node.parent.probability
+    #     node = node.parent
+    #   return prob    #can make this negative log probability.
+
+    def assign_parent_index(self,parent_index):
+      self.parent_index = parent_index
+
+
+
+
+
 def decodePath(best_path,unique_tokens_list,root_string):
     resultant_string = ''
     for i in range(len(best_path)):

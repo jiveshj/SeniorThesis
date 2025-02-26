@@ -34,16 +34,6 @@ class LMHeadModel:   # Check if this works
         length = len(next_token_candidates_tensor)
         topk_candidates_indexes = torch.topk(
             next_token_candidates_tensor, length).indices.tolist()
-        
-        
-        #printing 1st token tensor
-        # print(next_token_candidates_tensor[0])
-
-        
-        #printing 1st token tensor in sorted arr
-        # next_token_candidates_sort = torch.sort(next_token_candidates_tensor)
-        # print(next_token_candidates_sort[1])
-
 
         # Get the token probabilities for all candidates.
         all_candidates_probabilities = torch.nn.functional.softmax(
@@ -133,11 +123,16 @@ class SearchTree:
 
 
 
-
 def decodePath(best_path,unique_tokens_list,root_string):
     resultant_string = ''
     for i in range(len(best_path)):
-        resultant_string = resultant_string + ' '+ unique_tokens_list[i][best_path[i]]
+      if unique_tokens_list[i][best_path[i]] in ['.',':',',','?','!',';']:
+            if (i-1>= 0):
+                resultant_string = resultant_string+unique_tokens_list[i][best_path[i]]
+      elif "'" in unique_tokens_list[i][best_path[i]]:
+              resultant_string = resultant_string + unique_tokens_list[i][best_path[i]]
+      else:
+            resultant_string = resultant_string + ' '+ unique_tokens_list[i][best_path[i]]
     return root_string+resultant_string
 
 # Now, have the probability matrix ready in which one list contains the probability to reach that state from previous list of tokens

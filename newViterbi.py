@@ -1,8 +1,6 @@
 
 def VITERBI_Lists(state_transition_probmat, initial_state_prob):
 
-
-
     viterbi_mat = []
     backpointer = []
     viterbi_1stLayer = []
@@ -35,4 +33,4 @@ def VITERBI_Lists(state_transition_probmat, initial_state_prob):
         best_path.append(backpointer[i][best_path[j]])
         j += 1
     best_path = best_path[::-1]
-    return best_path, viterbi_mat
+    return best_path, viterbi_mat,best_path_prob

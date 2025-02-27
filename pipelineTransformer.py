@@ -1,4 +1,4 @@
-from newViterbi.py import VITERBI_Lists
+from newViterbi import VITERBI_Lists
 
 import torch
 from transformers import AutoModelForCausalLM , AutoTokenizer

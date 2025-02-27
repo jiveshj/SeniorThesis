@@ -227,7 +227,6 @@ def find_overlap_children(arr):
   children2 = {child.context for child in arr[1].child}
   common = len(children1.intersection(children2))
   return common / len(arr[0].child) if arr[0].child else 0
-
 def generateIntermediates(root,numTokens = 3, loop_runner = 4):
   sentence = SearchTree(root,1)
   context = []
@@ -250,7 +249,7 @@ def generateIntermediates(root,numTokens = 3, loop_runner = 4):
   flops_counter = {}
   cached_probs = {}
   batch_size = 75
-  holdout_number = 5
+  holdout_number = 15
   for i in range(num_tokens):
     context = tokens_50K[0][i][0]
     unique_tokens.add(context)
@@ -293,11 +292,9 @@ def generateIntermediates(root,numTokens = 3, loop_runner = 4):
         context = total_predictions[j][s][0]
         prob = total_predictions[j][s][1]
 
-        if (i == loop_runner-1):
-           print(context, end = " ")
-           print(prob)
-
-
+        # if (i == loop_runner-1):
+        #    print(context, end = " ")
+        #    print(prob)
         unique_tokens.add(context)
 
         context = SearchTree(context,prob,uniqueTokensList[j])   #probably redundant: Because I should only create SearchTree of unique tokens
@@ -311,24 +308,44 @@ def generateIntermediates(root,numTokens = 3, loop_runner = 4):
     #unique_elements.append(unique_tokens) # append the unique tokens list at each iteration to unique_elements list
     content.append(new_content) # for storing tokens which will pass to the decode_path function.
 
-    for token in uniqueTokensList[previousUniqueLength:]:
-      probs = []  #for making probability matrix and applying viterbi.
-      probs2 = [] #for finding the new parent.
-      for prevToken in uniqueTokensList[:previousUniqueLength]:
-        probabilityCalc = findProbability(prevToken,token,model)
+    # for token in uniqueTokensList[previousUniqueLength:]:
+    #   probs = []  #for making probability matrix and applying viterbi.
+    #   probs2 = [] #for finding the new parent.
+    #   for prevToken in uniqueTokensList[:previousUniqueLength]:
+      
+    #     probabilityCalc = findProbability(prevToken,token,model)
+
+      
+    #     probs.append(probabilityCalc)
+    #     probs2.append(probabilityCalc*prevToken.calcProbTillNow())
+    #     #new code below inserted:
+    #   if not probs2:
+    #     continue
+    #   else:
+    #     max_value = max(probs2)
+    #     max_index = probs2.index(max_value)
+    #     token.replace_parent(uniqueTokensList[:previousUniqueLength][max_index])
+    #     # token.create_child() # not sure about this think about it more. 
+    #     token.assign_parent_index(max_index)
+
+    #   probability.append(probs)
+    # probabilityMatrix.append(probability)
+    comb_prob = []
+    for prevToken in uniqueTokensList[:previousUniqueLength]:
+      comb_prob.append(findProbability(prevToken,uniqueTokensList[previousUniqueLength:], model))
+    comb_prob = list(itertools.chain(*comb_prob)) # flattening the list
 
 
-        probs.append(probabilityCalc)
-        probs2.append(probabilityCalc*prevToken.calcProbTillNow())
-        #new code below inserted:
+    for tokenumber,newToken in enumerate(uniqueTokensList[previousUniqueLength:]):
+      probs = [comb_prob[a*len(uniqueTokensList[previousUniqueLength:]) + tokenumber] for a in range(len(uniqueTokensList[:previousUniqueLength]))]
+      probs2 = [probs[i]*uniqueTokensList[:previousUniqueLength][i].calcProbTillNow() for i in range(len(probs))]
       if not probs2:
         continue
       else:
         max_value = max(probs2)
         max_index = probs2.index(max_value)
-        token.replace_parent(uniqueTokensList[:previousUniqueLength][max_index])
-        token.assign_parent_index(max_index)
-
+        newToken.replace_parent(uniqueTokensList[:previousUniqueLength][max_index])
+        newToken.assign_parent_index(max_index)
       probability.append(probs)
     probabilityMatrix.append(probability)
     flops_counter[i-1] = model.get_batch_prediction_count()
@@ -340,8 +357,9 @@ def generateIntermediates(root,numTokens = 3, loop_runner = 4):
     previousUniqueLength = len(uniqueTokensList[previousUniqueLength:])
     uniqueTokensList = uniqueTokensList[len(uniqueTokensList)-previousUniqueLength:]
 
-
   return probabilityMatrix, initialStateProbability, content,uniqueTokenLength, flops_counter
+
+
 
 def ViterbiTransformerPipeline(rootSentence, numTokens = 3, loop_runner=3):
     probabilityMatrix,initialStateProbability,content, uniqueTokenLength, flops_counter = generateIntermediates(rootSentence,numTokens,loop_runner+1)

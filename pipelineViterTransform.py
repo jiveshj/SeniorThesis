@@ -1,6 +1,7 @@
 from newViterbi import VITERBI_Lists
 from collections import Counter
 from collections import defaultdict
+import itertools
 
 import torch
 from transformers import AutoModelForCausalLM , AutoTokenizer

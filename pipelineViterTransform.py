@@ -228,7 +228,6 @@ def find_overlap_children(arr):
   children2 = {child.context for child in arr[1].child}
   common = len(children1.intersection(children2))
   return common / len(arr[0].child) if arr[0].child else 0
-
 def generateIntermediates(root,numTokens = 3, loop_runner = 4):
   sentence = SearchTree(root,1)
   context = []
@@ -251,7 +250,7 @@ def generateIntermediates(root,numTokens = 3, loop_runner = 4):
   flops_counter = {}
   cached_probs = {}
   batch_size = 75
-  holdout_number = 5
+  holdout_number = 15
   for i in range(num_tokens):
     context = tokens_50K[0][i][0]
     unique_tokens.add(context)
@@ -354,7 +353,6 @@ def generateIntermediates(root,numTokens = 3, loop_runner = 4):
 
     previousUniqueLength = len(uniqueTokensList[previousUniqueLength:])
     uniqueTokensList = uniqueTokensList[len(uniqueTokensList)-previousUniqueLength:]
-
 
   return probabilityMatrix, initialStateProbability, content,uniqueTokenLength, flops_counter
 
